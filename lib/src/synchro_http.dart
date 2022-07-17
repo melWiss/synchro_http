@@ -1,164 +1,282 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:http/http.dart' as h;
-import 'package:synchro_http/src/repo/http_extension.dart';
-import 'package:synchro_http/src/repo/impl/json.dart';
-import 'package:synchro_http/src/repo/impl/requests.dart';
-import 'package:synchro_http/src/repo/interface.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:path/path.dart';
 import 'package:simple_connection_checker/simple_connection_checker.dart';
-export './repo.dart';
+import 'package:synchro_http/src/enums/sync_status.dart';
+import 'package:synchro_http/src/exceptions/no_cache.dart';
+import 'package:synchro_http/src/exceptions/no_internet.dart';
+import 'package:synchro_http/src/exceptions/status_code.dart';
+import 'package:synchro_http/src/repo/cache/repo.dart';
+import 'package:synchro_http/src/repo/cache/impl/requests.dart';
 
-class SynchronizedHttp {
+import 'package:http/http.dart' as http;
+
+class SynchroHttp {
+  /// the singleton
+  static final SynchroHttp _singleton = SynchroHttp._internal();
+
+  /// Default lookup address
+  static String? lookup;
+
+  /// Base url
+  static String? baseUrl;
+
+  /// Default http headers
+  static Map<String, String> headers = {"Content-Type": "application/json"};
+
+  /// Requests cache repo
   final RepoInterface _requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+
+  /// Responses cache repo
   final RepoInterface _responsesRepo = JsonRepo(name: HttpType.RESPONSE);
-  final SimpleConnectionChecker _connection = SimpleConnectionChecker();
 
-  final BehaviorSubject<Map<String, dynamic>> _requestController =
-      BehaviorSubject<Map<String, dynamic>>();
-  final BehaviorSubject<bool> _beepController =
-      BehaviorSubject<bool>.seeded(false);
-  Stream<Map<String, dynamic>> get requestsStream => _requestController.stream;
-
+  /// Get Requests cache repo
   RepoInterface get requestsRepo => _requestsRepo;
+
+  /// Get Responses cache repo
   RepoInterface get responsesRepo => _responsesRepo;
 
-  SynchronizedHttp({
-    /// a internet address that we will test on whether it's connected to it or not.
-    String? lookupAddress,
-  }) {
-    if (lookupAddress != null) _connection.setLookUpAddress(lookupAddress);
-    _requestsRepo.getAll.then((value) {
-      _requestController.add(value);
-      h.Client client = h.Client();
-      _connection.onConnectionChange.listen((event) async {
-        if (event) {
-          var requests = await _requestsRepo.getAll;
-          int i = 0;
-          requests.forEach((key, value) async {
-            if (value["status"] == null ||
-                (value['status'] >= 300 || value['status'] < 200)) {
-              h.Request req = RequestMethods.fromJson(value);
-              var res = await client.send(req);
-              value['status'] = res.statusCode;
-              _requestController.add(requests);
-              await _requestsRepo.update(value, key: key);
+  /// private constructor
+  SynchroHttp._internal();
+
+  /// factory constructor
+  factory SynchroHttp() => _singleton;
+
+  /// Future synchronize requests
+  static Future async() async {
+    SimpleConnectionChecker connection = SimpleConnectionChecker();
+    RepoInterface requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+    RepoInterface responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+    http.Client client = http.Client();
+    connection.onConnectionChange.listen((event) async {
+      if (event) {
+        var requests = await requestsRepo.getAll;
+        requests.forEach((url, request) async {
+          if (request["status"] == null ||
+              (request['status'] >= 300 || request['status'] < 200)) {
+            http.Request req = RequestMethods.fromJson(request);
+            var response = await client.send(req);
+            request['status'] = response.statusCode;
+            await requestsRepo.update(request, key: url);
+            if (request['method'] == HttpMethods.GET) {
+              await responsesRepo.write(
+                (await http.Response.fromStream(response)).toJson(),
+              );
             }
-            i++;
-            if (i == requests.length) {
-              _beepController.add(event);
-            }
-          });
-        }
-      });
+          }
+        });
+      }
     });
   }
 
-  Future<h.Response> get(Uri url, {Map<String, String>? headers}) async {
-    try {
-      var response = await h.get(url, headers: headers);
-      await _responsesRepo.write(response.toJson());
-      return response;
-    } catch (e) {
-      var cached = await _responsesRepo.get(url.toString());
-      return ResponseMethods.fromJson(cached);
+  /// Stream synchronize requests
+  static Stream<SyncStatus> sync({bool deleteOnSuccess = false}) async* {
+    SimpleConnectionChecker connection = SimpleConnectionChecker();
+    connection.setLookUpAddress(lookup);
+    RepoInterface requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+    RepoInterface responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+    http.Client client = http.Client();
+    await for (bool status in connection.onConnectionChange) {
+      if (status) {
+        var requests = await requestsRepo.getAll;
+        if (requests.isNotEmpty) {
+          yield SyncStatus.synchronizing;
+          requests.forEach((url, request) async {
+            if (request["status"] == null ||
+                (request['status'] >= 300 || request['status'] < 200)) {
+              http.Request req = RequestMethods.fromJson(request);
+              var response = await client.send(req);
+              request['status'] = response.statusCode;
+              if (!deleteOnSuccess) {
+                await requestsRepo.update(request, key: url);
+              } else {
+                await requestsRepo.delete(url);
+              }
+              if (request['method'] == HttpMethods.GET) {
+                await responsesRepo.write(
+                  (await http.Response.fromStream(response)).toJson(),
+                );
+              }
+            }
+          });
+        }
+        yield SyncStatus.online;
+      } else {
+        yield SyncStatus.offline;
+      }
     }
   }
 
-  Future<h.Response> post(
-    Uri url, {
+  /// delete cached data
+  static Future clearCache() async {
+    RepoInterface requests = RequestsRepo(name: HttpType.REQUEST);
+    RepoInterface responses = JsonRepo(name: HttpType.RESPONSE);
+    await responses.clear();
+    await requests.clear();
+  }
+
+  /// cached get request
+  Future<http.Response> get({
+    /// the url to the api
+    Uri? url,
+
+    /// the path to the api
+    String? path,
+
+    /// the request headers
     Map<String, String>? headers,
+  }) async {
+    assert((url != null && path == null) ||
+        (url == null && baseUrl != null && path != null));
+
+    url ??= Uri.parse("$baseUrl$path");
+
+    try {
+      var response =
+          await http.get(url, headers: headers ?? SynchroHttp.headers);
+      await _responsesRepo.write(response.toJson());
+
+      if (response.statusCode >= 300 || response.statusCode < 200) {
+        throw StatusException(statusCode: response.statusCode, data: response);
+      }
+      return response;
+    } on SocketException catch (e) {
+      await _requestsRepo.write({
+        "url": url.toString(),
+        "status": null,
+        "method": HttpMethods.GET,
+        "headers": headers ?? SynchroHttp.headers,
+        "type": HttpType.REQUEST,
+      });
+      var cached = await _responsesRepo.get(url.toString());
+      http.Response cachedResponse = ResponseMethods.fromJson(cached);
+      throw NoInternetException<http.Response>(
+        data: cachedResponse,
+      );
+    }
+  }
+
+  /// cached post request
+  Future<http.Response> post({
+    /// the url to the api
+    Uri? url,
+
+    /// the path to the api
+    String? path,
+
+    /// the request headers
+    Map<String, String>? headers,
+
+    /// the request body
     Map<String, dynamic>? body,
   }) async {
+    assert((url != null && path == null) ||
+        (url == null && baseUrl != null && path != null));
+
+    url ??= Uri.parse("$baseUrl$path");
     try {
-      var response = await h.post(
+      var response = await http.post(
         url,
-        headers: headers,
+        headers: headers ?? SynchroHttp.headers,
         body: body != null ? jsonEncode(body) : null,
       );
-      // await _responsesRepo.write(response.toJson());
+      if (response.statusCode >= 300 || response.statusCode < 200) {
+        throw StatusException(statusCode: response.statusCode, data: response);
+      }
       return response;
-    } catch (e) {
-      // var cached = await _responsesRepo.get(url.toString());
-      // return ResponseMethods.fromJson(cached);
+    } on SocketException catch (e) {
       await _requestsRepo.write({
         "url": url.toString(),
         "status": null,
         "method": HttpMethods.POST,
-        "headers": headers,
+        "headers": headers ?? SynchroHttp.headers,
         "body": body ?? {},
         "type": HttpType.REQUEST,
       });
-      _requestController.add(await _requestsRepo.getAll);
-      throw "Will be synced when there's an internet connectivity";
+      throw NoInternetException();
     }
   }
 
-  Future<h.Response> put(
-    Uri url, {
+  /// cached put request
+  Future<http.Response> put({
+    /// the url to the api
+    Uri? url,
+
+    /// the path to the api
+    String? path,
+
+    /// the request headers
     Map<String, String>? headers,
+
+    /// the request body
     Map<String, dynamic>? body,
   }) async {
+    assert((url != null && path == null) ||
+        (url == null && baseUrl != null && path != null));
+
+    url ??= Uri.parse("$baseUrl$path");
     try {
-      var response = await h.put(
+      var response = await http.put(
         url,
-        headers: headers,
+        headers: headers ?? SynchroHttp.headers,
         body: body != null ? jsonEncode(body) : null,
       );
-      // await _responsesRepo.write(response.toJson());
+      if (response.statusCode >= 300 || response.statusCode < 200) {
+        throw StatusException(statusCode: response.statusCode, data: response);
+      }
       return response;
-    } catch (e) {
-      // var cached = await _responsesRepo.get(url.toString());
-      // return ResponseMethods.fromJson(cached);
+    } on SocketException catch (e) {
       await _requestsRepo.write({
         "url": url.toString(),
         "status": null,
         "method": HttpMethods.PUT,
-        "headers": headers,
+        "headers": headers ?? SynchroHttp.headers,
         "body": body ?? {},
         "type": HttpType.REQUEST,
       });
-      _requestController.add(await _requestsRepo.getAll);
-      throw "Will be synced when there's an internet connectivity";
+      throw NoInternetException();
     }
   }
 
-  Future<h.Response> delete(
-    Uri url, {
+  /// cached delete request
+  Future<http.Response> delete({
+    /// the url to the api
+    Uri? url,
+
+    /// the path to the api
+    String? path,
+
+    /// the request headers
     Map<String, String>? headers,
+
+    /// the request body
     Map<String, dynamic>? body,
   }) async {
+    assert((url != null && path == null) ||
+        (url == null && baseUrl != null && path != null));
+
+    url ??= Uri.parse("$baseUrl$path");
     try {
-      var response = await h.delete(
+      var response = await http.delete(
         url,
-        headers: headers,
+        headers: headers ?? SynchroHttp.headers,
         body: body,
       );
-      // await _responsesRepo.write(response.toJson());
+      if (response.statusCode >= 300 || response.statusCode < 200) {
+        throw StatusException(statusCode: response.statusCode, data: response);
+      }
       return response;
-    } catch (e) {
-      // var cached = await _responsesRepo.get(url.toString());
-      // return ResponseMethods.fromJson(cached);
+    } on SocketException catch (e) {
       await _requestsRepo.write({
         "url": url.toString(),
         "status": null,
         "method": HttpMethods.DELETE,
-        "headers": headers,
+        "headers": headers ?? SynchroHttp.headers,
         "body": body ?? {},
         "type": HttpType.REQUEST,
       });
-      _requestController.add(await _requestsRepo.getAll);
-      throw "Will be synced when there's an internet connectivity";
-    }
-  }
-
-  Stream<h.Response> streamGet(Uri url, {Map<String, String>? headers}) async* {
-    yield await get(url, headers: headers);
-    await for (bool connectionState in _beepController.stream) {
-      if (connectionState) {
-        yield await get(url, headers: headers);
-      }
+      throw NoInternetException();
     }
   }
 }

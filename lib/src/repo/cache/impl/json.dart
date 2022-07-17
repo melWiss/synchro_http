@@ -89,4 +89,13 @@ class JsonRepo implements RepoInterface {
       f.writeAsStringSync(jsonEncode(db));
     }
   }
+
+  @override
+  Future clear() async {
+    Directory dirDB = await getApplicationSupportDirectory();
+    File f = File(join(dirDB.path, "$_name.json"));
+    if (f.existsSync()) {
+      f.deleteSync();
+    }
+  }
 }

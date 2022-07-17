@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 void main() {
+  SynchroHttp.baseUrl = "http://localhost:3000";
+  // SynchroHttp.lookup = "https://bridella.herokuapp.com/api/ping";
   runApp(const MyApp());
 }
 
@@ -36,7 +38,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
-  SynchronizedHttp syn = SynchronizedHttp();
+  SynchroHttp syn = SynchroHttp();
   late TabController controller = TabController(length: 3, vsync: this);
 
   @override
@@ -46,46 +48,52 @@ class _MyHomePageState extends State<MyHomePage>
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          children: [
-            TabBar(
-              controller: controller,
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.black87,
-              tabs: const [
-                Tab(
-                  text: "Stream Get",
-                ),
-                Tab(
-                  text: "Synced Post",
-                ),
-                Tab(
-                  text: "Synced Delete",
-                ),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
+        child: NetworkStatusWidget(
+          child: Column(
+            children: [
+              TabBar(
                 controller: controller,
-                children: [
-                  StreamGet(synchronizedHttp: syn),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    child: SyncedPost(
-                      synchronizedHttp: syn,
-                    ),
+                labelColor: Colors.blue,
+                unselectedLabelColor: Colors.black87,
+                tabs: const [
+                  Tab(
+                    text: "Stream Get",
                   ),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    child: SyncedDelete(
-                      synchronizedHttp: syn,
-                    ),
+                  Tab(
+                    text: "Synced Post",
+                  ),
+                  Tab(
+                    text: "Synced Delete",
                   ),
                 ],
               ),
-            ),
-          ],
+              Expanded(
+                child: TabBarView(
+                  controller: controller,
+                  children: [
+                    StreamGet(http: syn),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height,
+                      child: SyncedPost(
+                        http: syn,
+                      ),
+                    ),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height,
+                      child: SyncedDelete(
+                        http: syn,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+      floatingActionButton: const FloatingActionButton(
+        child: Icon(Icons.delete),
+        onPressed: SynchroHttp.clearCache,
       ),
     );
   }

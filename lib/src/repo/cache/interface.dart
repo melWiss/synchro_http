@@ -20,6 +20,9 @@ abstract class RepoInterface {
 
   /// delete a cached json data by key
   Future delete(String key);
+
+  /// clear cached data
+  Future clear();
 }
 
 class HttpMethods {

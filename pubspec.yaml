@@ -1,6 +1,6 @@
 name: synchro_http
-description: A new Flutter package project.
-version: 0.0.3
+description: A new Flutter package that helps with the auto caching http requests.
+version: 0.1.0
 homepage: https://pub.dev/packages/synchro_http
 
 environment:

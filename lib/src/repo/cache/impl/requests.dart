@@ -70,4 +70,13 @@ class RequestsRepo implements RepoInterface {
   Future write(Map<String, dynamic> json, {String? key}) async {
     await insert(json, key: key);
   }
+
+  @override
+  Future clear() async {
+    Directory dirDB = await getApplicationSupportDirectory();
+    File f = File(join(dirDB.path, "$_name.json"));
+    if (f.existsSync()) {
+      f.deleteSync();
+    }
+  }
 }
