@@ -22,6 +22,9 @@ class SynchroHttp {
   /// Base url
   static String? baseUrl;
 
+  /// sync get requests
+  static bool syncGetRequests = false;
+
   /// Default http headers
   static Map<String, String> headers = {"Content-Type": "application/json"};
 
@@ -59,7 +62,8 @@ class SynchroHttp {
             var response = await client.send(req);
             request['status'] = response.statusCode;
             await requestsRepo.update(request, key: url);
-            if (request['method'] == HttpMethods.GET) {
+            if (request['method'] == HttpMethods.GET &&
+                SynchroHttp.syncGetRequests) {
               await responsesRepo.write(
                 (await http.Response.fromStream(response)).toJson(),
               );
@@ -93,7 +97,8 @@ class SynchroHttp {
               } else {
                 await requestsRepo.delete(url);
               }
-              if (request['method'] == HttpMethods.GET) {
+              if (request['method'] == HttpMethods.GET &&
+                  SynchroHttp.syncGetRequests) {
                 await responsesRepo.write(
                   (await http.Response.fromStream(response)).toJson(),
                 );
@@ -142,13 +147,15 @@ class SynchroHttp {
       }
       return response;
     } on SocketException catch (e) {
-      await _requestsRepo.write({
-        "url": url.toString(),
-        "status": null,
-        "method": HttpMethods.GET,
-        "headers": headers ?? SynchroHttp.headers,
-        "type": HttpType.REQUEST,
-      });
+      if (SynchroHttp.syncGetRequests) {
+        await _requestsRepo.write({
+          "url": url.toString(),
+          "status": null,
+          "method": HttpMethods.GET,
+          "headers": headers ?? SynchroHttp.headers,
+          "type": HttpType.REQUEST,
+        });
+      }
       var cached = await _responsesRepo.get(url.toString());
       http.Response cachedResponse = ResponseMethods.fromJson(cached);
       throw NoInternetException<http.Response>(
