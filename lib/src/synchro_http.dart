@@ -1,20 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path/path.dart';
 import 'package:simple_connection_checker/simple_connection_checker.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
-import 'package:synchro_http/src/exceptions/no_cache.dart';
 import 'package:synchro_http/src/exceptions/no_internet.dart';
 import 'package:synchro_http/src/exceptions/status_code.dart';
 import 'package:synchro_http/src/repo/cache/repo.dart';
-import 'package:synchro_http/src/repo/cache/impl/requests.dart';
+import 'package:rxdart/rxdart.dart';
 
 import 'package:http/http.dart' as http;
 
 class SynchroHttp {
   /// the singleton
-  static final SynchroHttp _singleton = SynchroHttp._internal();
+  static final SynchroHttp singleton = SynchroHttp._internal();
 
   /// Default lookup address
   static String? lookup;
@@ -24,6 +22,9 @@ class SynchroHttp {
 
   /// sync get requests
   static bool syncGetRequests = false;
+
+  /// sync get requests
+  static bool deleteOnSuccess = false;
 
   /// Default http headers
   static Map<String, String> headers = {"Content-Type": "application/json"};
@@ -41,10 +42,18 @@ class SynchroHttp {
   RepoInterface get responsesRepo => _responsesRepo;
 
   /// private constructor
-  SynchroHttp._internal();
+  SynchroHttp._internal() {
+    _sync().listen((event) => _controller.sink.add(event));
+  }
 
   /// factory constructor
-  factory SynchroHttp() => _singleton;
+  factory SynchroHttp() => singleton;
+
+  /// Sync controller
+  BehaviorSubject<SyncStatus> _controller = BehaviorSubject<SyncStatus>();
+
+  /// Sync stream
+  Stream<SyncStatus> get sync => _controller.stream;
 
   /// Future synchronize requests
   static Future async() async {
@@ -61,7 +70,11 @@ class SynchroHttp {
             http.Request req = RequestMethods.fromJson(request);
             var response = await client.send(req);
             request['status'] = response.statusCode;
-            await requestsRepo.update(request, key: url);
+            if (!SynchroHttp.deleteOnSuccess) {
+              await requestsRepo.update(request, key: url);
+            } else {
+              await requestsRepo.delete(url);
+            }
             if (request['method'] == HttpMethods.GET &&
                 SynchroHttp.syncGetRequests) {
               await responsesRepo.write(
@@ -75,9 +88,9 @@ class SynchroHttp {
   }
 
   /// Stream synchronize requests
-  static Stream<SyncStatus> sync({bool deleteOnSuccess = false}) async* {
+  Stream<SyncStatus> _sync() async* {
     SimpleConnectionChecker connection = SimpleConnectionChecker();
-    connection.setLookUpAddress(lookup);
+    connection.setLookUpAddress(SynchroHttp.lookup);
     RepoInterface requestsRepo = RequestsRepo(name: HttpType.REQUEST);
     RepoInterface responsesRepo = JsonRepo(name: HttpType.RESPONSE);
     http.Client client = http.Client();
@@ -92,7 +105,7 @@ class SynchroHttp {
               http.Request req = RequestMethods.fromJson(request);
               var response = await client.send(req);
               request['status'] = response.statusCode;
-              if (!deleteOnSuccess) {
+              if (!SynchroHttp.deleteOnSuccess) {
                 await requestsRepo.update(request, key: url);
               } else {
                 await requestsRepo.delete(url);
@@ -131,36 +144,46 @@ class SynchroHttp {
 
     /// the request headers
     Map<String, String>? headers,
+
+    /// from cache
+    bool fromCache = false,
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
 
     url ??= Uri.parse("$baseUrl$path");
 
-    try {
-      var response =
-          await http.get(url, headers: headers ?? SynchroHttp.headers);
-      await _responsesRepo.write(response.toJson());
-
-      if (response.statusCode >= 300 || response.statusCode < 200) {
-        throw StatusException(statusCode: response.statusCode, data: response);
-      }
-      return response;
-    } on SocketException catch (e) {
-      if (SynchroHttp.syncGetRequests) {
-        await _requestsRepo.write({
-          "url": url.toString(),
-          "status": null,
-          "method": HttpMethods.GET,
-          "headers": headers ?? SynchroHttp.headers,
-          "type": HttpType.REQUEST,
-        });
-      }
+    if (fromCache) {
       var cached = await _responsesRepo.get(url.toString());
       http.Response cachedResponse = ResponseMethods.fromJson(cached);
-      throw NoInternetException<http.Response>(
-        data: cachedResponse,
-      );
+      return cachedResponse;
+    } else {
+      try {
+        var response =
+            await http.get(url, headers: headers ?? SynchroHttp.headers);
+        await _responsesRepo.write(response.toJson());
+
+        if (response.statusCode >= 300 || response.statusCode < 200) {
+          throw StatusException(
+              statusCode: response.statusCode, data: response);
+        }
+        return response;
+      } on SocketException catch (e) {
+        if (SynchroHttp.syncGetRequests) {
+          await _requestsRepo.write({
+            "url": url.toString(),
+            "status": null,
+            "method": HttpMethods.GET,
+            "headers": headers ?? SynchroHttp.headers,
+            "type": HttpType.REQUEST,
+          });
+        }
+        var cached = await _responsesRepo.get(url.toString());
+        http.Response cachedResponse = ResponseMethods.fromJson(cached);
+        throw NoInternetException<http.Response>(
+          data: cachedResponse,
+        );
+      }
     }
   }
 

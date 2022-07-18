@@ -8,15 +8,16 @@ class NetworkStatusWidget extends StatelessWidget {
   const NetworkStatusWidget({
     Key? key,
     this.child,
-    this.deleteOnSuccess = false,
+    this.showOnline = true,
   }) : super(key: key);
   final Widget? child;
-  final bool deleteOnSuccess;
+  final bool showOnline;
 
   @override
   Widget build(BuildContext context) {
+    SynchroHttp http = SynchroHttp();
     return StreamWidget<SyncStatus>(
-      stream: SynchroHttp.sync(deleteOnSuccess: deleteOnSuccess),
+      stream: http.sync,
       widget: (context, status) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +49,7 @@ class NetworkStatusWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            if (status == SyncStatus.online)
+            if (status == SyncStatus.online && showOnline)
               TimerWidget(
                 child: Container(
                   color: Colors.green,

@@ -8,7 +8,7 @@ import 'package:synchro_http/synchro_http.dart';
 
 void main() {
   SynchroHttp.baseUrl = "http://localhost:3000";
-  // SynchroHttp.lookup = "https://bridella.herokuapp.com/api/ping";
+  // SynchroHttp.lookup = "bridella.herokuapp.com/api/ping";
   runApp(const MyApp());
 }
 
