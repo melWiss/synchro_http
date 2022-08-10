@@ -1,22 +1,22 @@
 abstract class RepoInterface {
   /// get cached json data by key
-  Future<Map<String, dynamic>> get(String key);
+  Future<String> get(String key);
 
   /// get all cached json data
-  Future<Map<String, dynamic>> get getAll;
+  Future<Map<String, String>> get getAll;
   // Future<Map<String, dynamic>> get(
   //   String key, {
   //   Function(Map<String, dynamic> m1, Map<String, dynamic> m2)? where,
   // });
 
   /// insert new json data
-  Future insert(Map<String, dynamic> json, {String? key});
+  Future insert(String json, String key);
 
   /// update an existent json data
-  Future update(Map<String, dynamic> json, {String? key});
+  Future update(String json, String key);
 
   /// a mix of insert and update
-  Future write(Map<String, dynamic> json, {String? key});
+  Future write(String json, String key);
 
   /// delete a cached json data by key
   Future delete(String key);

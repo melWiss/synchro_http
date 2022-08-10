@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart';
 
 extension ResponseMethods on Response {
-  static Response fromJson(Map json) {
+  static Response fromMap(Map json) {
     if (json['type'] == HttpType.RESPONSE) {
       return Response(
         jsonEncode(json['body']),
@@ -15,7 +15,11 @@ extension ResponseMethods on Response {
     throw HttpTypeException.NOT_COMPATIBLE_HTTP_TYPE;
   }
 
-  Map<String, dynamic> toJson() {
+  static Response fromJson(String json) {
+    return fromMap(jsonDecode(json));
+  }
+
+  Map<String, dynamic> toMap() {
     return {
       "url": request!.url.toString(),
       "status": statusCode,
@@ -26,13 +30,13 @@ extension ResponseMethods on Response {
     };
   }
 
-  String toJsonString() {
-    return jsonEncode(toJson());
+  String toJson() {
+    return jsonEncode(toMap());
   }
 }
 
 extension RequestMethods on Request {
-  static Request fromJson(Map json) {
+  static Request fromMap(Map json) {
     if (json['type'] == HttpType.REQUEST) {
       var request = Request(
         json['method'],
@@ -45,7 +49,11 @@ extension RequestMethods on Request {
     throw HttpTypeException.NOT_COMPATIBLE_HTTP_TYPE;
   }
 
-  Map<String, dynamic> toJson() {
+  static Request fromJson(String json) {
+    return fromMap(jsonDecode(json));
+  }
+
+  Map<String, dynamic> toMap() {
     return {
       "url": url.toString(),
       "status": null,
@@ -56,8 +64,8 @@ extension RequestMethods on Request {
     };
   }
 
-  String toJsonString() {
-    return jsonEncode(toJson());
+  String toJson() {
+    return jsonEncode(toMap());
   }
 }
 

@@ -24,9 +24,10 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  Future<Map<String, dynamic>> get getAll async {
+  Future<Map<String, String>> get getAll async {
     File f = await _getDbFile;
-    Map<String, dynamic> data = jsonDecode(utf8.decode(f.readAsBytesSync()));
+    Map<String, String> data =
+        Map.from(jsonDecode(utf8.decode(f.readAsBytesSync())));
     return data;
   }
 
@@ -40,13 +41,13 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  Future<Map<String, dynamic>> get(String key) async {
+  Future<String> get(String key) async {
     var db = await getAll;
-    return db[key];
+    return db[key]!;
   }
 
   @override
-  Future insert(Map<String, dynamic> json, {String? key}) async {
+  Future insert(String json, String key) async {
     var db = await getAll;
     var f = await _getDbFile;
     if (key != null)
@@ -57,7 +58,7 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  Future update(Map<String, dynamic> json, {String? key}) async {
+  Future update(String json, String key) async {
     var db = await getAll;
     if (key != null && db.containsKey(key)) {
       var f = await _getDbFile;
@@ -67,8 +68,8 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  Future write(Map<String, dynamic> json, {String? key}) async {
-    await insert(json, key: key);
+  Future write(String json, String key) async {
+    await insert(json, key);
   }
 
   @override

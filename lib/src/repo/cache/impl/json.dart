@@ -25,9 +25,10 @@ class JsonRepo implements RepoInterface {
   }
 
   @override
-  Future<Map<String, dynamic>> get getAll async {
+  Future<Map<String, String>> get getAll async {
     File f = await _getDbFile;
-    Map<String, dynamic> data = jsonDecode(utf8.decode(f.readAsBytesSync()));
+    Map<String, String> data =
+        Map.from(jsonDecode(utf8.decode(f.readAsBytesSync())));
     return data;
   }
 
@@ -41,53 +42,34 @@ class JsonRepo implements RepoInterface {
   }
 
   @override
-  Future<Map<String, dynamic>> get(String key) async {
+  Future<String> get(String key) async {
     var db = await getAll;
-    return db[key];
+    return db[key]!;
   }
 
   @override
-  Future insert(Map<String, dynamic> json, {String? key}) async {
-    var db = await getAll;
-    if (!db.containsKey(json['url'])) {
-      var f = await _getDbFile;
-      db.addAll({json['url']: json});
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-      return;
-    }
-    if (key != null && !db.containsKey(key)) {
-      var f = await _getDbFile;
-      db.addAll({key: json});
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-      return;
-    }
-  }
-
-  @override
-  Future update(Map<String, dynamic> json, {String? key}) async {
-    var db = await getAll;
-    if (key == null && db.containsKey(json['url'])) {
-      var f = await _getDbFile;
-      db[json['url']] = json;
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-    } else if (key != null && db.containsKey(key)) {
-      var f = await _getDbFile;
-      db[key] = json;
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-    }
-  }
-
-  @override
-  Future write(Map<String, dynamic> json, {String? key}) async {
+  Future insert(String json, String key) async {
     var db = await getAll;
     var f = await _getDbFile;
-    if (key == null) {
-      db.addAll({json['url']: json});
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-    } else {
-      db.addAll({key: json});
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
-    }
+    db.addAll({key: json});
+    f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
+    return;
+  }
+
+  @override
+  Future update(String json, String key) async {
+    var db = await getAll;
+    var f = await _getDbFile;
+    db[key] = json;
+    f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
+  }
+
+  @override
+  Future write(String json, String key) async {
+    var db = await getAll;
+    var f = await _getDbFile;
+    db.addAll({key: json});
+    f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
   }
 
   @override
