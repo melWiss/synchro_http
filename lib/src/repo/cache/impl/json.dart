@@ -27,7 +27,7 @@ class JsonRepo implements RepoInterface {
   @override
   Future<Map<String, dynamic>> get getAll async {
     File f = await _getDbFile;
-    Map<String, dynamic> data = jsonDecode(f.readAsStringSync());
+    Map<String, dynamic> data = jsonDecode(utf8.decode(f.readAsBytesSync()));
     return data;
   }
 
@@ -36,7 +36,7 @@ class JsonRepo implements RepoInterface {
     var db = await getAll;
     if (db.remove(key) != null) {
       var f = await _getDbFile;
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     }
   }
 
@@ -52,13 +52,13 @@ class JsonRepo implements RepoInterface {
     if (!db.containsKey(json['url'])) {
       var f = await _getDbFile;
       db.addAll({json['url']: json});
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
       return;
     }
     if (key != null && !db.containsKey(key)) {
       var f = await _getDbFile;
       db.addAll({key: json});
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
       return;
     }
   }
@@ -69,11 +69,11 @@ class JsonRepo implements RepoInterface {
     if (key == null && db.containsKey(json['url'])) {
       var f = await _getDbFile;
       db[json['url']] = json;
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     } else if (key != null && db.containsKey(key)) {
       var f = await _getDbFile;
       db[key] = json;
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     }
   }
 
@@ -83,10 +83,10 @@ class JsonRepo implements RepoInterface {
     var f = await _getDbFile;
     if (key == null) {
       db.addAll({json['url']: json});
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     } else {
       db.addAll({key: json});
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     }
   }
 

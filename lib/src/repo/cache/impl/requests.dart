@@ -26,7 +26,7 @@ class RequestsRepo implements RepoInterface {
   @override
   Future<Map<String, dynamic>> get getAll async {
     File f = await _getDbFile;
-    Map<String, dynamic> data = jsonDecode(f.readAsStringSync());
+    Map<String, dynamic> data = jsonDecode(utf8.decode(f.readAsBytesSync()));
     return data;
   }
 
@@ -35,7 +35,7 @@ class RequestsRepo implements RepoInterface {
     var db = await getAll;
     if (db.remove(key) != null) {
       var f = await _getDbFile;
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     }
   }
 
@@ -53,7 +53,7 @@ class RequestsRepo implements RepoInterface {
       db.addAll({key: json});
     else
       db.addAll({db.length.toString(): json});
-    f.writeAsStringSync(jsonEncode(db));
+    f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
   }
 
   @override
@@ -62,7 +62,7 @@ class RequestsRepo implements RepoInterface {
     if (key != null && db.containsKey(key)) {
       var f = await _getDbFile;
       db[key] = json;
-      f.writeAsStringSync(jsonEncode(db));
+      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
     }
   }
 

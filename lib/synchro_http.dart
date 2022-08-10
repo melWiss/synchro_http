@@ -7,4 +7,4 @@ export 'package:rxdart/rxdart.dart';
 export 'src/enums/enums.dart';
 export 'src/exceptions/exceptions.dart';
 export 'src/widgets/widgets.dart';
-export 'src/repo/cache/interface.dart';
+export 'src/repo/cache/repo.dart';
