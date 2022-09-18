@@ -24,51 +24,50 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  Future<Map<String, dynamic>> get getAll async {
+  Future<Map<String, String>> get getAll async {
     File f = await _getDbFile;
-    Map<String, dynamic> data = jsonDecode(utf8.decode(f.readAsBytesSync()));
-    return data;
+    Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
+    Map<String, String> decodedData = data.map((key, value) =>
+        MapEntry(key, String.fromCharCodes(base64Decode(value))));
+    return decodedData;
   }
 
   @override
   Future delete(String key) async {
-    var db = await getAll;
+    var db = await getNonDecodedAll;
     if (db.remove(key) != null) {
       var f = await _getDbFile;
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
+      f.writeAsStringSync(jsonEncode(db));
     }
   }
 
   @override
-  Future<Map<String, dynamic>> get(String key) async {
-    var db = await getAll;
-    return db[key];
+  Future<String> get(String key) async {
+    var db = await getNonDecodedAll;
+    return db[key]!;
   }
 
   @override
-  Future insert(Map<String, dynamic> json, {String? key}) async {
-    var db = await getAll;
+  Future insert(String json, String key) async {
+    var db = await getNonDecodedAll;
     var f = await _getDbFile;
-    if (key != null)
-      db.addAll({key: json});
-    else
-      db.addAll({db.length.toString(): json});
-    f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
+    db.addAll({db.length.toString(): base64Encode(json.codeUnits)});
+    f.writeAsStringSync(jsonEncode(db));
   }
 
   @override
-  Future update(Map<String, dynamic> json, {String? key}) async {
-    var db = await getAll;
-    if (key != null && db.containsKey(key)) {
+  Future update(String json, String key) async {
+    var db = await getNonDecodedAll;
+    if (db.containsKey(key)) {
       var f = await _getDbFile;
-      db[key] = json;
-      f.writeAsBytesSync(utf8.encode(jsonEncode(db)));
+      db[key] = base64Encode(json.codeUnits);
+      f.writeAsStringSync(jsonEncode(db));
     }
   }
 
   @override
-  Future write(Map<String, dynamic> json, {String? key}) async {
-    await insert(json, key: key);
+  Future write(String json, String key) async {
+    await insert(json, key);
   }
 
   @override
@@ -78,5 +77,13 @@ class RequestsRepo implements RepoInterface {
     if (f.existsSync()) {
       f.deleteSync();
     }
+  }
+
+  @override
+  // TODO: implement getNonDecodedAll
+  Future<Map<String, String>> get getNonDecodedAll async {
+    File f = await _getDbFile;
+    Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
+    return data;
   }
 }

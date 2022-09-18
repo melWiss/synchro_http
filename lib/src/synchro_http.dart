@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -65,21 +66,23 @@ class SynchroHttp {
       if (event) {
         var requests = await requestsRepo.getAll;
         requests.forEach((url, request) async {
-          if (request["status"] == null ||
-              (request['status'] >= 300 || request['status'] < 200)) {
+          Map<String, dynamic> map = jsonDecode(request);
+          if (map["status"] == null ||
+              (map['status'] >= 300 || map['status'] < 200)) {
             http.Request req = RequestMethods.fromJson(request);
             var response = await client.send(req);
-            request['status'] = response.statusCode;
+            map['status'] = response.statusCode;
             if (!SynchroHttp.deleteOnSuccess) {
-              await requestsRepo.update(request, key: url);
+              await requestsRepo.update(jsonEncode(map), url);
             } else {
               await requestsRepo.delete(url);
             }
-            if (request['method'] == HttpMethods.GET &&
+            if (map['method'] == HttpMethods.GET &&
                 SynchroHttp.syncGetRequests) {
               await responsesRepo.write(
-                (await http.Response.fromStream(response)).toJson(),
-              );
+                  jsonEncode(
+                      (await http.Response.fromStream(response)).toJson()),
+                  url);
             }
           }
         });
@@ -100,21 +103,23 @@ class SynchroHttp {
         if (requests.isNotEmpty) {
           yield SyncStatus.synchronizing;
           requests.forEach((url, request) async {
-            if (request["status"] == null ||
-                (request['status'] >= 300 || request['status'] < 200)) {
+            Map<String, dynamic> map = jsonDecode(request);
+            if (map["status"] == null ||
+                (map['status'] >= 300 || map['status'] < 200)) {
               http.Request req = RequestMethods.fromJson(request);
               var response = await client.send(req);
-              request['status'] = response.statusCode;
+              map['status'] = response.statusCode;
               if (!SynchroHttp.deleteOnSuccess) {
-                await requestsRepo.update(request, key: url);
+                await requestsRepo.update(jsonEncode(map), url);
               } else {
                 await requestsRepo.delete(url);
               }
-              if (request['method'] == HttpMethods.GET &&
+              if (map['method'] == HttpMethods.GET &&
                   SynchroHttp.syncGetRequests) {
                 await responsesRepo.write(
-                  (await http.Response.fromStream(response)).toJson(),
-                );
+                    jsonEncode(
+                        (await http.Response.fromStream(response)).toJson()),
+                    url);
               }
             }
           });
@@ -161,7 +166,7 @@ class SynchroHttp {
       try {
         var response =
             await http.get(url, headers: headers ?? SynchroHttp.headers);
-        await _responsesRepo.write(response.toJson());
+        await _responsesRepo.write(response.toJson(), url.toString());
 
         if (response.statusCode >= 300 || response.statusCode < 200) {
           throw StatusException(
@@ -170,13 +175,16 @@ class SynchroHttp {
         return response;
       } on SocketException catch (e) {
         if (SynchroHttp.syncGetRequests) {
-          await _requestsRepo.write({
-            "url": url.toString(),
-            "status": null,
-            "method": HttpMethods.GET,
-            "headers": headers ?? SynchroHttp.headers,
-            "type": HttpType.REQUEST,
-          });
+          await _requestsRepo.write(
+            jsonEncode({
+              "url": url.toString(),
+              "status": null,
+              "method": HttpMethods.GET,
+              "headers": headers ?? SynchroHttp.headers,
+              "type": HttpType.REQUEST,
+            }),
+            url.toString(),
+          );
         }
         var cached = await _responsesRepo.get(url.toString());
         http.Response cachedResponse = ResponseMethods.fromJson(cached);
@@ -199,7 +207,7 @@ class SynchroHttp {
     Map<String, String>? headers,
 
     /// the request body
-    Map<String, dynamic>? body,
+    String? body,
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
@@ -209,21 +217,24 @@ class SynchroHttp {
       var response = await http.post(
         url,
         headers: headers ?? SynchroHttp.headers,
-        body: body != null ? jsonEncode(body) : null,
+        body: body,
       );
       if (response.statusCode >= 300 || response.statusCode < 200) {
         throw StatusException(statusCode: response.statusCode, data: response);
       }
       return response;
     } on SocketException catch (e) {
-      await _requestsRepo.write({
-        "url": url.toString(),
-        "status": null,
-        "method": HttpMethods.POST,
-        "headers": headers ?? SynchroHttp.headers,
-        "body": body ?? {},
-        "type": HttpType.REQUEST,
-      });
+      await _requestsRepo.write(
+        jsonEncode({
+          "url": url.toString(),
+          "status": null,
+          "method": HttpMethods.POST,
+          "headers": headers ?? SynchroHttp.headers,
+          "body": body,
+          "type": HttpType.REQUEST,
+        }),
+        url.toString(),
+      );
       throw NoInternetException();
     }
   }
@@ -240,7 +251,7 @@ class SynchroHttp {
     Map<String, String>? headers,
 
     /// the request body
-    Map<String, dynamic>? body,
+    String? body,
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
@@ -250,21 +261,24 @@ class SynchroHttp {
       var response = await http.put(
         url,
         headers: headers ?? SynchroHttp.headers,
-        body: body != null ? jsonEncode(body) : null,
+        body: body,
       );
       if (response.statusCode >= 300 || response.statusCode < 200) {
         throw StatusException(statusCode: response.statusCode, data: response);
       }
       return response;
     } on SocketException catch (e) {
-      await _requestsRepo.write({
-        "url": url.toString(),
-        "status": null,
-        "method": HttpMethods.PUT,
-        "headers": headers ?? SynchroHttp.headers,
-        "body": body ?? {},
-        "type": HttpType.REQUEST,
-      });
+      await _requestsRepo.write(
+        jsonEncode({
+          "url": url.toString(),
+          "status": null,
+          "method": HttpMethods.PUT,
+          "headers": headers ?? SynchroHttp.headers,
+          "body": body,
+          "type": HttpType.REQUEST,
+        }),
+        url.toString(),
+      );
       throw NoInternetException();
     }
   }
@@ -281,7 +295,7 @@ class SynchroHttp {
     Map<String, String>? headers,
 
     /// the request body
-    Map<String, dynamic>? body,
+    String? body,
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
@@ -298,14 +312,17 @@ class SynchroHttp {
       }
       return response;
     } on SocketException catch (e) {
-      await _requestsRepo.write({
-        "url": url.toString(),
-        "status": null,
-        "method": HttpMethods.DELETE,
-        "headers": headers ?? SynchroHttp.headers,
-        "body": body ?? {},
-        "type": HttpType.REQUEST,
-      });
+      await _requestsRepo.write(
+        jsonEncode({
+          "url": url.toString(),
+          "status": null,
+          "method": HttpMethods.DELETE,
+          "headers": headers ?? SynchroHttp.headers,
+          "body": body,
+          "type": HttpType.REQUEST,
+        }),
+        url.toString(),
+      );
       throw NoInternetException();
     }
   }
