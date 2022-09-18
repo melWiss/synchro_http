@@ -4,6 +4,8 @@ abstract class RepoInterface {
 
   /// get all cached json data
   Future<Map<String, String>> get getAll;
+
+  Future<Map<String, String>> get getNonDecodedAll;
   // Future<Map<String, dynamic>> get(
   //   String key, {
   //   Function(Map<String, dynamic> m1, Map<String, dynamic> m2)? where,

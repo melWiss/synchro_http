@@ -43,7 +43,7 @@ extension RequestMethods on Request {
         Uri.parse(json['url']),
       );
       request.headers.addAll(Map<String, String>.from(json['headers']));
-      request.body = jsonEncode(json['body']);
+      request.body = json['body'] ?? "";
       return request;
     }
     throw HttpTypeException.NOT_COMPATIBLE_HTTP_TYPE;
