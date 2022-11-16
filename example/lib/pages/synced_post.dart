@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:synchro_http/synchro_http.dart';
@@ -40,15 +42,17 @@ class _SyncedPostState extends State<SyncedPost> {
         ElevatedButton(
           child: const Text("Submit"),
           onPressed: () {
-            widget.http.post(
-              path: "/posts",
-              body: {
-                "userId": int.parse(textEditingController1.text),
-                "id": int.parse(textEditingController2.text),
-                "title": textEditingController3.text,
-                "body": textEditingController4.text,
-              },
-            ).then((value) => setState(() {}));
+            widget.http
+                .post(
+                  path: "/posts",
+                  body: jsonEncode({
+                    "userId": int.parse(textEditingController1.text),
+                    "id": int.parse(textEditingController2.text),
+                    "title": textEditingController3.text,
+                    "body": textEditingController4.text,
+                  }),
+                )
+                .then((value) => setState(() {}));
           },
         ),
         Expanded(
