@@ -89,4 +89,10 @@ class JsonRepo implements RepoInterface {
     Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
     return data;
   }
+
+  @override
+  Future init() async {
+    // TODO: implement init
+    debugPrint("JsonRepo is Initialized!");
+  }
 }

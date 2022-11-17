@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -85,5 +86,11 @@ class RequestsRepo implements RepoInterface {
     File f = await _getDbFile;
     Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
     return data;
+  }
+
+  @override
+  Future init() async {
+    // TODO: implement init
+    debugPrint("JsonRepo is Initialized!");
   }
 }

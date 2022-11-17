@@ -11,6 +11,9 @@ abstract class RepoInterface {
   //   Function(Map<String, dynamic> m1, Map<String, dynamic> m2)? where,
   // });
 
+  /// initializes the repo
+  Future init();
+
   /// insert new json data
   Future insert(String json, String key);
 

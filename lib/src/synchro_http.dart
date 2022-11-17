@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:simple_connection_checker/simple_connection_checker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
 import 'package:synchro_http/src/exceptions/no_internet.dart';
 import 'package:synchro_http/src/exceptions/status_code.dart';
+import 'package:synchro_http/src/repo/cache/impl/hive.dart';
 import 'package:synchro_http/src/repo/cache/repo.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:http/http.dart' as http;
 
@@ -16,6 +19,7 @@ class SynchroHttp {
   static final SynchroHttp singleton = SynchroHttp._internal();
 
   /// Default lookup address
+  @deprecated
   static String? lookup;
 
   /// Base url
@@ -31,10 +35,10 @@ class SynchroHttp {
   static Map<String, String> headers = {"Content-Type": "application/json"};
 
   /// Requests cache repo
-  final RepoInterface _requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+  RepoInterface _requestsRepo = RequestsRepo(name: HttpType.REQUEST);
 
   /// Responses cache repo
-  final RepoInterface _responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+  RepoInterface _responsesRepo = JsonRepo(name: HttpType.RESPONSE);
 
   /// Get Requests cache repo
   RepoInterface get requestsRepo => _requestsRepo;
@@ -44,26 +48,30 @@ class SynchroHttp {
 
   /// private constructor
   SynchroHttp._internal() {
-    _sync().listen((event) => _controller.sink.add(event));
+    if (kIsWeb) {
+      _syncWeb().listen((event) => _controller.sink.add(event));
+    } else {
+      _sync().listen((event) => _controller.sink.add(event));
+    }
   }
 
   /// factory constructor
   factory SynchroHttp() => singleton;
 
   /// Sync controller
-  BehaviorSubject<SyncStatus> _controller = BehaviorSubject<SyncStatus>();
+  final BehaviorSubject<SyncStatus> _controller = BehaviorSubject<SyncStatus>();
 
   /// Sync stream
   Stream<SyncStatus> get sync => _controller.stream;
 
   /// Future synchronize requests
   static Future async() async {
-    SimpleConnectionChecker connection = SimpleConnectionChecker();
-    RepoInterface requestsRepo = RequestsRepo(name: HttpType.REQUEST);
-    RepoInterface responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+    Connectivity connection = Connectivity();
+    RepoInterface requestsRepo = SynchroHttp()._requestsRepo;
+    RepoInterface responsesRepo = SynchroHttp()._responsesRepo;
     http.Client client = http.Client();
-    connection.onConnectionChange.listen((event) async {
-      if (event) {
+    connection.onConnectivityChanged.listen((status) async {
+      if (status != ConnectivityResult.none) {
         var requests = await requestsRepo.getAll;
         requests.forEach((url, request) async {
           Map<String, dynamic> map = jsonDecode(request);
@@ -92,13 +100,15 @@ class SynchroHttp {
 
   /// Stream synchronize requests
   Stream<SyncStatus> _sync() async* {
-    SimpleConnectionChecker connection = SimpleConnectionChecker();
-    connection.setLookUpAddress(SynchroHttp.lookup);
-    RepoInterface requestsRepo = RequestsRepo(name: HttpType.REQUEST);
-    RepoInterface responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+    RepoInterface requestsRepo = _requestsRepo;
+    RepoInterface responsesRepo = _responsesRepo;
+    if (responsesRepo is HiveRepo || requestsRepo is HiveRepo) {
+      await _initHiveRepo();
+    }
     http.Client client = http.Client();
-    await for (bool status in connection.onConnectionChange) {
-      if (status) {
+    var connection = Connectivity();
+    await for (ConnectivityResult status in connection.onConnectivityChanged) {
+      if (status != ConnectivityResult.none) {
         var requests = await requestsRepo.getAll;
         if (requests.isNotEmpty) {
           yield SyncStatus.synchronizing;
@@ -131,12 +141,57 @@ class SynchroHttp {
     }
   }
 
+  /// Stream Synchronize requests for the web
+  Stream<SyncStatus> _syncWeb() async* {
+    await useHiveRepo();
+    await _initHiveRepo();
+    RepoInterface requestsRepo = _requestsRepo;
+    RepoInterface responsesRepo = _responsesRepo;
+    http.Client client = http.Client();
+    var connection = Connectivity();
+    var streamController = BehaviorSubject.seeded("boo");
+    Timer.periodic(Duration(seconds: 3), (timer) {
+      streamController.add("boo");
+    });
+    await for (var ev in streamController.stream) {
+      // var status = await connection.checkConnectivity();
+      // if (status != ConnectivityResult.none) {
+      var requests = await requestsRepo.getAll;
+      if (requests.isNotEmpty) {
+        yield SyncStatus.synchronizing;
+        requests.forEach((url, request) async {
+          Map<String, dynamic> map = jsonDecode(request);
+          if (map["status"] == null ||
+              (map['status'] >= 300 || map['status'] < 200)) {
+            http.Request req = RequestMethods.fromJson(request);
+            var response = await client.send(req);
+            map['status'] = response.statusCode;
+            if (!SynchroHttp.deleteOnSuccess) {
+              await requestsRepo.update(jsonEncode(map), url);
+            } else {
+              await requestsRepo.delete(url);
+            }
+            if (map['method'] == HttpMethods.GET &&
+                SynchroHttp.syncGetRequests) {
+              await responsesRepo.write(
+                  jsonEncode(
+                      (await http.Response.fromStream(response)).toJson()),
+                  url);
+            }
+          }
+        });
+      }
+      yield SyncStatus.online;
+      // } else {
+      // yield SyncStatus.offline;
+      // }
+    }
+  }
+
   /// delete cached data
-  static Future clearCache() async {
-    RepoInterface requests = RequestsRepo(name: HttpType.REQUEST);
-    RepoInterface responses = JsonRepo(name: HttpType.RESPONSE);
-    await responses.clear();
-    await requests.clear();
+  Future clearCache() async {
+    await _responsesRepo.clear();
+    await _requestsRepo.clear();
   }
 
   /// cached get request
@@ -325,5 +380,26 @@ class SynchroHttp {
       );
       throw NoInternetException();
     }
+  }
+
+  /// use JsonRepo
+  Future<void> useJsonRepo() async {
+    _requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+    _responsesRepo = JsonRepo(name: HttpType.RESPONSE);
+  }
+
+  /// use HiveRepo
+  Future<void> useHiveRepo() async {
+    _requestsRepo = HiveRepo(name: HttpType.REQUEST);
+    _responsesRepo = HiveRepo(name: HttpType.RESPONSE);
+  }
+
+  /// init HiveRepo
+  Future<void> _initHiveRepo() async {
+    if (!kIsWeb) {
+      await Hive.initFlutter();
+    }
+    await _requestsRepo.init();
+    await _responsesRepo.init();
   }
 }

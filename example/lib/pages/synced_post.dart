@@ -5,8 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 class SyncedPost extends StatefulWidget {
-  SyncedPost({Key? key, required this.http}) : super(key: key);
-  final SynchroHttp http;
+  SyncedPost({Key? key}) : super(key: key);
 
   @override
   State<SyncedPost> createState() => _SyncedPostState();
@@ -42,7 +41,7 @@ class _SyncedPostState extends State<SyncedPost> {
         ElevatedButton(
           child: const Text("Submit"),
           onPressed: () {
-            widget.http
+            SynchroHttp.singleton
                 .post(
                   path: "/posts",
                   body: jsonEncode({
@@ -57,7 +56,7 @@ class _SyncedPostState extends State<SyncedPost> {
         ),
         Expanded(
           child: FutureWidget<Map<String, dynamic>>(
-            future: widget.http.requestsRepo.getAll,
+            future: SynchroHttp.singleton.requestsRepo.getAll,
             widget: (snapshot) {
               var data = snapshot.values.toList();
               data = data
