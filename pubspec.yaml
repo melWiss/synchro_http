@@ -1,6 +1,6 @@
 name: synchro_http
 description: A new Flutter package that helps with the auto caching http requests.
-version: 0.2.1
+version: 0.2.3
 homepage: https://github.com/melWiss/synchro_http
 
 environment:
@@ -13,8 +13,10 @@ dependencies:
   http: ^0.13.4
   path: ^1.8.0
   path_provider: ^2.0.8
-  simple_connection_checker: ^0.2.1
   rxdart: ^0.27.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  connectivity_plus: ^2.3.9
 
 dev_dependencies:
   flutter_test:

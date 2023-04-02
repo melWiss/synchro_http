@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 class StreamGet extends StatelessWidget {
-  const StreamGet({
+  StreamGet({
     Key? key,
-    required this.http,
   }) : super(key: key);
-  final SynchroHttp http;
+  final SynchroHttp http = SynchroHttp();
 
   @override
   Widget build(BuildContext context) {

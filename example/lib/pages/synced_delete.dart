@@ -3,8 +3,8 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 class SyncedDelete extends StatelessWidget {
-  SyncedDelete({Key? key, required this.http}) : super(key: key);
-  final SynchroHttp http;
+  SyncedDelete({Key? key}) : super(key: key);
+  final SynchroHttp http = SynchroHttp();
   TextEditingController textEditingController1 = TextEditingController();
   TextEditingController textEditingController2 = TextEditingController();
   TextEditingController textEditingController3 = TextEditingController();

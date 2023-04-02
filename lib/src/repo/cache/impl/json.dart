@@ -9,6 +9,7 @@ import '../interface.dart';
 
 class JsonRepo implements RepoInterface {
   final String _name;
+  final _base64String = utf8.fuse(base64);
 
   JsonRepo({
     /// the name of the repo
@@ -28,8 +29,8 @@ class JsonRepo implements RepoInterface {
   Future<Map<String, String>> get getAll async {
     File f = await _getDbFile;
     Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
-    Map<String, String> decodedData = data.map((key, value) =>
-        MapEntry(key, String.fromCharCodes(base64Decode(value))));
+    Map<String, String> decodedData =
+        data.map((key, value) => MapEntry(key, _base64String.decode(value)));
     return decodedData;
   }
 
@@ -45,14 +46,14 @@ class JsonRepo implements RepoInterface {
   @override
   Future<String> get(String key) async {
     var db = await getNonDecodedAll;
-    return String.fromCharCodes(base64Decode(db[key]!));
+    return _base64String.decode(db[key]!);
   }
 
   @override
   Future insert(String json, String key) async {
     var db = await getNonDecodedAll;
     var f = await _getDbFile;
-    db.addAll({key: base64Encode(json.codeUnits)});
+    db.addAll({key: _base64String.encode(json)});
     f.writeAsStringSync(jsonEncode(db));
   }
 
@@ -60,7 +61,7 @@ class JsonRepo implements RepoInterface {
   Future update(String json, String key) async {
     var db = await getNonDecodedAll;
     var f = await _getDbFile;
-    db[key] = base64Encode(json.codeUnits);
+    db[key] = _base64String.encode(json);
     f.writeAsStringSync(jsonEncode(db));
   }
 
@@ -68,7 +69,7 @@ class JsonRepo implements RepoInterface {
   Future write(String json, String key) async {
     var db = await getNonDecodedAll;
     var f = await _getDbFile;
-    db.addAll({key: base64Encode(json.codeUnits)});
+    db.addAll({key: _base64String.encode(json)});
     f.writeAsStringSync(jsonEncode(db));
   }
 
@@ -87,5 +88,11 @@ class JsonRepo implements RepoInterface {
     File f = await _getDbFile;
     Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
     return data;
+  }
+
+  @override
+  Future init() async {
+    // TODO: implement init
+    debugPrint("JsonRepo is Initialized!");
   }
 }
