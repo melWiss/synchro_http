@@ -12,17 +12,17 @@ abstract class RepoInterface<T> {
   }) : _name = name;
 
   /// a getter for the box instance
-  Box<T> get box => _box!;
+  Box<T>? get box => _box;
 
   /// get cached [T] data by key
   T? get(int key);
 
   /// get all cached [T] data
-  Iterable<T> get getAll;
+  Iterable<T>? get getAll;
 
   /// initializes the repo
-  void init() async {
-    _box = await Hive.openBox<T>(_name);
+  Future<void> init() async {
+    _box ??= await Hive.openBox<T>(_name);
   }
 
   /// insert new [T] data

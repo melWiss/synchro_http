@@ -1,0 +1,4 @@
+enum PostEvent {
+  loading,
+  loaded,
+}

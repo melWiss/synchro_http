@@ -1,7 +1,9 @@
+import 'package:example/src/screens/posts.dart/index.dart';
 import 'package:flutter/material.dart';
+import 'package:synchro_http/synchro_http.dart';
 
-//TODO: write an example
-void main() {
+void main() async {
+  SynchroHttp.baseUrl = "http://localhost:3000";
   runApp(const MyApp());
 }
 
@@ -23,9 +25,10 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+        useMaterial3: true
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const PostsIndex(),
     );
   }
 }

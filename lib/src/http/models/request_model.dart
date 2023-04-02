@@ -36,6 +36,10 @@ class SynchroRequest extends Request {
   @HiveField(4)
   Map<String, String> headers = {};
 
+  @override
+  Uint8List get bodyBytes => Uint8List.fromList(body.codeUnits);
+
+
   factory SynchroRequest.fromRequest(Request request) {
     return SynchroRequest(
       request.url.toString(),

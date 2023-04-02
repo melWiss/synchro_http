@@ -34,7 +34,7 @@ class SynchroResponse extends Response {
   @override
   @HiveField(5)
   final String? reasonPhrase;
-  
+
   bool cached;
 
   factory SynchroResponse.fromResponse(Response response) => SynchroResponse(
@@ -72,4 +72,12 @@ class SynchroResponse extends Response {
   }
 
   String toJson() => jsonEncode(toMap());
+
+  // FIXME: find a way to save the request hash, this won't return a valid
+  // request hash since request body and response body aren't the same
+  int get requestHash =>
+      request!.method.hashCode ^
+      request!.url.toString().hashCode ^
+      body.hashCode ^
+      jsonEncode(headers).hashCode;
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
 import 'package:synchro_http/src/exceptions/no_cache.dart';
 import 'package:synchro_http/src/http/models/request_model.dart';
@@ -10,7 +11,6 @@ import 'package:synchro_http/src/http/models/response_model.dart';
 import 'package:synchro_http/src/repo/cache/impl/responses.dart';
 import 'package:synchro_http/src/repo/cache/repo.dart';
 import 'package:rxdart/rxdart.dart';
-
 
 class SynchroHttp {
   /// the singleton
@@ -50,11 +50,15 @@ class SynchroHttp {
   SynchroHttp._internal() {
     Hive.registerAdapter(SynchroRequestAdapter());
     Hive.registerAdapter(SynchroResponseAdapter());
-    if (kIsWeb) {
-      _syncWeb().listen((event) => _controller.sink.add(event));
-    } else {
-      _sync().listen((event) => _controller.sink.add(event));
-    }
+    _init().then((value) {
+      if (kIsWeb) {
+        // FIXME: sync functions aren't detecting connectivity state
+        _syncWeb().listen((event) => _controller.sink.add(event));
+      } else {
+        // FIXME: sync functions aren't detecting connectivity state
+        _sync().listen((event) => _controller.sink.add(event));
+      }
+    });
   }
 
   /// factory constructor
@@ -71,10 +75,12 @@ class SynchroHttp {
     Connectivity connection = Connectivity();
     RequestRepo requestsRepo = SynchroHttp().requestsRepo;
     ResponseRepo responsesRepo = SynchroHttp().responsesRepo;
+    await requestsRepo.init();
+    await responsesRepo.init();
     connection.onConnectivityChanged.listen((status) async {
       if (status != ConnectivityResult.none) {
         var requests = requestsRepo.getAll;
-        requests.forEach((request) async {
+        requests?.forEach((request) async {
           var response = await request.sendIt();
           if (!SynchroHttp.deleteOnSuccess) {
             requestsRepo.update(request.hashCode, request);
@@ -90,25 +96,24 @@ class SynchroHttp {
 
   /// Stream synchronize requests
   Stream<SyncStatus> _sync() async* {
-    await _initHiveRepo();
     var connection = Connectivity();
     await for (ConnectivityResult status in connection.onConnectivityChanged) {
       if (status != ConnectivityResult.none) {
-        var requests = requestsRepo.getAll;
-        if (requests.isNotEmpty) {
-          yield SyncStatus.synchronizing;
-          requests.forEach((request) async {
-            var response = await request.sendIt();
-            if (!SynchroHttp.deleteOnSuccess) {
-              requestsRepo.update(request.hashCode, request);
-            } else {
+        try {
+          var requests = requestsRepo.getAll; // FIXME: something is off  here
+          if (requests?.isNotEmpty ?? false) {
+            yield SyncStatus.synchronizing;
+            for (var request in requests!) {
+              var response = await request.sendIt();
               requestsRepo.delete(request.hashCode);
+              responsesRepo.write(request.hashCode, response);
             }
-            responsesRepo.write(request.hashCode, response);
-          });
+          }
+          _toBeSynced.forEach((fn) => fn());
+          yield SyncStatus.online;
+        } catch (_) {
+          yield SyncStatus.offline;
         }
-        _toBeSynced.forEach((fn) => fn());
-        yield SyncStatus.online;
       } else {
         yield SyncStatus.offline;
       }
@@ -117,26 +122,25 @@ class SynchroHttp {
 
   /// Stream Synchronize requests for the web
   Stream<SyncStatus> _syncWeb() async* {
-    await _initHiveRepo();
     var streamController = BehaviorSubject.seeded("boo");
     Timer.periodic(const Duration(seconds: 3), (timer) {
       streamController.add("boo");
     });
     await for (var _ in streamController.stream) {
       var requests = requestsRepo.getAll;
-      if (requests.isNotEmpty) {
-        yield SyncStatus.synchronizing;
-        requests.forEach((request) async {
-          var response = await request.sendIt();
-          if (!SynchroHttp.deleteOnSuccess) {
-            requestsRepo.update(request.hashCode, request);
-          } else {
+      if (requests?.isNotEmpty ?? false) {
+        try {
+          yield SyncStatus.synchronizing;
+          for (var request in requests!) {
+            var response = await request.sendIt();
             requestsRepo.delete(request.hashCode);
+            responsesRepo.write(request.hashCode, response);
           }
-          responsesRepo.write(request.hashCode, response);
-        });
-        _toBeSynced.forEach((fn) => fn());
-        yield SyncStatus.online;
+          _toBeSynced.forEach((fn) => fn());
+          yield SyncStatus.online;
+        } catch (_) {
+          yield SyncStatus.offline;
+        }
       } else {
         yield SyncStatus.offline;
       }
@@ -271,7 +275,7 @@ class SynchroHttp {
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
-
+    await _init();
     url ??= Uri.parse("$baseUrl$path");
     SynchroRequest request = SynchroRequest(
       url.toString(),
@@ -279,14 +283,15 @@ class SynchroHttp {
       body: body,
       headers: headers ?? SynchroHttp.headers,
     );
-
     try {
       if (fromCache) {
         var response = _responsesRepo.get(request.hashCode);
         if (response == null) throw NotCachedException();
         return response;
       } else {
-        return await request.sendIt();
+        var response = await request.sendIt();
+        _responsesRepo.write(request.hashCode, response);
+        return response;
       }
     } on NotCachedException catch (_) {
       return await request.sendIt();
@@ -298,16 +303,24 @@ class SynchroHttp {
         return response;
       }
       rethrow;
+    } on ClientException catch (_) {
+      _requestsRepo.write(request.hashCode, request);
+      var response = _responsesRepo.get(request.hashCode);
+      if (response != null) {
+        response.cached = true;
+        return response;
+      }
+      rethrow;
     }
   }
 
-  /// init HiveRepo
-  Future<void> _initHiveRepo() async {
+  /// init SynchroHttp
+  Future<void> _init() async {
     if (!kIsWeb) {
       await Hive.initFlutter();
     }
-    _requestsRepo.init();
-    _responsesRepo.init();
+    await _requestsRepo.init();
+    await _responsesRepo.init();
   }
 
   /// add a function to be called when the synchronization is completed
