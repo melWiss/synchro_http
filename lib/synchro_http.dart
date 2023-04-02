@@ -1,6 +1,6 @@
 library synchro_http;
 
-export 'src/synchro_http.dart';
+export 'src/http/synchro_http.dart';
 export 'package:http/http.dart';
 export 'package:connectivity_plus/connectivity_plus.dart';
 export 'package:rxdart/rxdart.dart';

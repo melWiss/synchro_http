@@ -1,38 +1,54 @@
-abstract class RepoInterface {
-  /// get cached json data by key
-  Future<String> get(String key);
+import 'package:hive/hive.dart';
 
-  /// get all cached json data
-  Future<Map<String, String>> get getAll;
+abstract class RepoInterface<T> {
+  /// db instance
+  Box<T>? _box;
 
-  Future<Map<String, String>> get getNonDecodedAll;
-  // Future<Map<String, dynamic>> get(
-  //   String key, {
-  //   Function(Map<String, dynamic> m1, Map<String, dynamic> m2)? where,
-  // });
+  /// the name of the box
+  final String _name;
+
+  RepoInterface({
+    required String name,
+  }) : _name = name;
+
+  /// a getter for the box instance
+  Box<T> get box => _box!;
+
+  /// get cached [T] data by key
+  T get(int key);
+
+  /// get all cached [T] data
+  Iterable<T> get getAll;
 
   /// initializes the repo
-  Future init();
+  void init() async {
+    _box = await Hive.openBox<T>(_name);
+  }
 
-  /// insert new json data
-  Future insert(String json, String key);
+  /// insert new [T] data
+  void insert(int key, T data);
 
-  /// update an existent json data
-  Future update(String json, String key);
+  /// update an existent [T] data
+  void update(int key, T data);
 
   /// a mix of insert and update
-  Future write(String json, String key);
+  void write(int key, T data);
 
-  /// delete a cached json data by key
-  Future delete(String key);
+  /// delete a cached [T] data by key
+  void delete(int key);
 
   /// clear cached data
-  Future clear();
+  void clear();
 }
 
 class HttpMethods {
   static const String GET = "GET";
+  static const String HEAD = "HEAD";
   static const String POST = "POST";
   static const String PUT = "PUT";
   static const String DELETE = "DELETE";
+  static const String CONNECT = "CONNECT";
+  static const String OPTIONS = "OPTIONS";
+  static const String TRACE = "TRACE";
+  static const String PATCH = "PATCH";
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
-import 'package:synchro_http/src/synchro_http.dart';
+import 'package:synchro_http/src/http/synchro_http.dart';
 import 'package:synchro_http/src/widgets/widgets.dart';
 
 class NetworkStatusWidget extends StatelessWidget {
