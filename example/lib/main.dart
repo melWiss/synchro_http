@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:example/pages/stream_get.dart';
 import 'package:example/pages/synced_delete.dart';
 import 'package:example/pages/synced_post.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:synchro_http/synchro_http.dart';
 
@@ -13,9 +10,6 @@ void main() async {
   // if you want to use HiveRepo on non web platform, use this block,
   // on web, by default it will use HiveRepo
   // on other platforms, the default choice is the JsonRepo
-  if (!kIsWeb) {
-    await SynchroHttp.singleton.useHiveRepo();
-  }
   // SynchroHttp.lookup = "bridella.herokuapp.com/api/ping";
   runApp(const MyApp());
 }
@@ -82,7 +76,7 @@ class _MyHomePageState extends State<MyHomePage>
                     StreamGet(),
                     SizedBox(
                       height: MediaQuery.of(context).size.height,
-                      child: SyncedPost(),
+                      child: const SyncedPost(),
                     ),
                     SizedBox(
                       height: MediaQuery.of(context).size.height,
@@ -96,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage>
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.delete),
+        child: const Icon(Icons.delete),
         onPressed: SynchroHttp.singleton.clearCache,
       ),
     );

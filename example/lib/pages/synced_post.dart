@@ -5,7 +5,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 class SyncedPost extends StatefulWidget {
-  SyncedPost({Key? key}) : super(key: key);
+  const SyncedPost({Key? key}) : super(key: key);
 
   @override
   State<SyncedPost> createState() => _SyncedPostState();
@@ -87,7 +87,7 @@ class _SyncedPostState extends State<SyncedPost> {
                           backgroundColor: Colors.red,
                         ),
                       ],
-                      motion: ScrollMotion(),
+                      motion: const ScrollMotion(),
                     ),
                   );
                 },

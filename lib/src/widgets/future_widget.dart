@@ -6,11 +6,12 @@ class FutureWidget<T> extends StatelessWidget {
   final Widget Function(Object? error)? onError;
   final Widget Function()? onWait;
   const FutureWidget({
+    Key? key,
     required this.future,
     required this.widget,
     this.onError,
     this.onWait,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +29,7 @@ class FutureWidget<T> extends StatelessWidget {
             return onError!(snapshot.error);
         } else {
           if (onWait == null)
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(),
             );
           else

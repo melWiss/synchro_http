@@ -1,5 +1,3 @@
-import 'package:http/http.dart';
-
 class NotCachedException implements Exception {
   final String message;
 

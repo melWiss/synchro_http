@@ -81,7 +81,6 @@ class RequestsRepo implements RepoInterface {
   }
 
   @override
-  // TODO: implement getNonDecodedAll
   Future<Map<String, String>> get getNonDecodedAll async {
     File f = await _getDbFile;
     Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
@@ -90,7 +89,6 @@ class RequestsRepo implements RepoInterface {
 
   @override
   Future init() async {
-    // TODO: implement init
     debugPrint("JsonRepo is Initialized!");
   }
 }

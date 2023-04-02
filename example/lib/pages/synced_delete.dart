@@ -5,12 +5,9 @@ import 'package:synchro_http/synchro_http.dart';
 class SyncedDelete extends StatelessWidget {
   SyncedDelete({Key? key}) : super(key: key);
   final SynchroHttp http = SynchroHttp();
-  TextEditingController textEditingController1 = TextEditingController();
-  TextEditingController textEditingController2 = TextEditingController();
-  TextEditingController textEditingController3 = TextEditingController();
-  TextEditingController textEditingController4 = TextEditingController();
   @override
   Widget build(BuildContext context) {
+    TextEditingController textEditingController1 = TextEditingController();
     return Column(
       children: [
         TextField(
@@ -58,7 +55,7 @@ class SyncedDelete extends StatelessWidget {
                           backgroundColor: Colors.red,
                         ),
                       ],
-                      motion: ScrollMotion(),
+                      motion: const ScrollMotion(),
                     ),
                   );
                 },
