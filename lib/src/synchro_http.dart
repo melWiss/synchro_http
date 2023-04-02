@@ -29,7 +29,7 @@ class SynchroHttp {
   static Map<String, String> headers = {"Content-Type": "application/json"};
 
   /// Requests cache repo
-  final RepoInterface _requestsRepo = RequestsRepo(name: HttpType.REQUEST);
+  final RepoInterface _requestsRepo = HiveRepo(name: HttpType.REQUEST);
 
   /// Responses cache repo
   final RepoInterface _responsesRepo = HiveRepo(name: HttpType.RESPONSE);
