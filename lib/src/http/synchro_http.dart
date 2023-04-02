@@ -4,14 +4,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
-import 'package:synchro_http/src/exceptions/no_internet.dart';
+import 'package:synchro_http/src/exceptions/no_cache.dart';
 import 'package:synchro_http/src/http/models/request_model.dart';
 import 'package:synchro_http/src/http/models/response_model.dart';
 import 'package:synchro_http/src/repo/cache/impl/responses.dart';
 import 'package:synchro_http/src/repo/cache/repo.dart';
 import 'package:rxdart/rxdart.dart';
 
-import 'package:http/http.dart' as http;
 
 class SynchroHttp {
   /// the singleton
@@ -161,36 +160,16 @@ class SynchroHttp {
     /// the request headers
     Map<String, String>? headers,
 
-    /// from cache
+    /// whether to get the response from cache or not
     bool fromCache = false,
   }) async {
-    assert((url != null && path == null) ||
-        (url == null && baseUrl != null && path != null));
-
-    url ??= Uri.parse("$baseUrl$path");
-    SynchroRequest request = SynchroRequest(
-      url.toString(),
-      HttpMethods.GET,
-      headers: headers ?? SynchroHttp.headers,
+    return await call(
+      method: HttpMethods.GET,
+      headers: headers,
+      path: path,
+      url: url,
+      fromCache: fromCache,
     );
-    SynchroResponse response;
-    if (fromCache) {
-      response = _responsesRepo.get(request.hashCode);
-      response.cached = true;
-    } else {
-      try {
-        response = await request.sendIt();
-        _responsesRepo.write(request.hashCode, response);
-        return response;
-      } on SocketException catch (_) {
-        if (SynchroHttp.syncGetRequests) {
-          _requestsRepo.write(request.hashCode, request);
-        }
-        response = _responsesRepo.get(request.hashCode);
-        response.cached = true;
-      }
-    }
-    return response;
   }
 
   /// cached post request
@@ -205,29 +184,19 @@ class SynchroHttp {
     Map<String, String>? headers,
 
     /// the request body
-    String? body,
-  }) async {
-    assert((url != null && path == null) ||
-        (url == null && baseUrl != null && path != null));
+    String body = "",
 
-    url ??= Uri.parse("$baseUrl$path");
-    try {
-      var response = await http.post(
-        url,
-        headers: headers ?? SynchroHttp.headers,
-        body: body,
-      );
-      return SynchroResponse.fromResponse(response);
-    } on SocketException catch (_) {
-      SynchroRequest synchroRequest = SynchroRequest(
-        url.toString(),
-        HttpMethods.POST,
-        body: body ?? "",
-        headers: headers ?? SynchroHttp.headers,
-      );
-      _requestsRepo.write(synchroRequest.hashCode, synchroRequest);
-      throw NoInternetException();
-    }
+    /// whether to get the response from cache or not
+    bool fromCache = false,
+  }) async {
+    return await call(
+      method: HttpMethods.POST,
+      headers: headers,
+      path: path,
+      url: url,
+      body: body,
+      fromCache: fromCache,
+    );
   }
 
   /// cached put request
@@ -242,29 +211,19 @@ class SynchroHttp {
     Map<String, String>? headers,
 
     /// the request body
-    String? body,
-  }) async {
-    assert((url != null && path == null) ||
-        (url == null && baseUrl != null && path != null));
+    String body = "",
 
-    url ??= Uri.parse("$baseUrl$path");
-    try {
-      var response = await http.put(
-        url,
-        headers: headers ?? SynchroHttp.headers,
-        body: body,
-      );
-      return SynchroResponse.fromResponse(response);
-    } on SocketException catch (_) {
-      SynchroRequest synchroRequest = SynchroRequest(
-        url.toString(),
-        HttpMethods.PUT,
-        body: body ?? "",
-        headers: headers ?? SynchroHttp.headers,
-      );
-      _requestsRepo.write(synchroRequest.hashCode, synchroRequest);
-      throw NoInternetException();
-    }
+    /// whether to get the response from cache or not
+    bool fromCache = false,
+  }) async {
+    return await call(
+      method: HttpMethods.PUT,
+      headers: headers,
+      path: path,
+      url: url,
+      body: body,
+      fromCache: fromCache,
+    );
   }
 
   /// cached delete request
@@ -278,30 +237,67 @@ class SynchroHttp {
     /// the request headers
     Map<String, String>? headers,
 
+    /// whether to get the response from cache or not
+    bool fromCache = false,
+  }) async {
+    return await call(
+      method: HttpMethods.DELETE,
+      headers: headers,
+      path: path,
+      url: url,
+      fromCache: fromCache,
+    );
+  }
+
+  /// this method call is a general way to call any HTTP method
+  Future<SynchroResponse> call({
+    /// HTTTP method
+    required String method,
+
+    /// the url to the api
+    Uri? url,
+
+    /// the path to the api
+    String? path,
+
+    /// the request headers
+    Map<String, String>? headers,
+
     /// the request body
-    String? body,
+    String body = "",
+
+    /// whether to get the response from cache or not
+    bool fromCache = false,
   }) async {
     assert((url != null && path == null) ||
         (url == null && baseUrl != null && path != null));
 
     url ??= Uri.parse("$baseUrl$path");
-    try {
-      var response = await http.delete(
-        url,
-        headers: headers ?? SynchroHttp.headers,
-        body: body,
-      );
+    SynchroRequest request = SynchroRequest(
+      url.toString(),
+      method,
+      body: body,
+      headers: headers ?? SynchroHttp.headers,
+    );
 
-      return SynchroResponse.fromResponse(response);
+    try {
+      if (fromCache) {
+        var response = _responsesRepo.get(request.hashCode);
+        if (response == null) throw NotCachedException();
+        return response;
+      } else {
+        return await request.sendIt();
+      }
+    } on NotCachedException catch (_) {
+      return await request.sendIt();
     } on SocketException catch (_) {
-      SynchroRequest synchroRequest = SynchroRequest(
-        url.toString(),
-        HttpMethods.DELETE,
-        body: body ?? "",
-        headers: headers ?? SynchroHttp.headers,
-      );
-      _requestsRepo.write(synchroRequest.hashCode, synchroRequest);
-      throw NoInternetException();
+      _requestsRepo.write(request.hashCode, request);
+      var response = _responsesRepo.get(request.hashCode);
+      if (response != null) {
+        response.cached = true;
+        return response;
+      }
+      rethrow;
     }
   }
 

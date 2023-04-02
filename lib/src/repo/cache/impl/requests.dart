@@ -15,8 +15,8 @@ class RequestRepo extends RepoInterface<SynchroRequest> {
   }
   
   @override
-  SynchroRequest get(int key) {
-    return box.get(key)!;
+  SynchroRequest? get(int key) {
+    return box.get(key);
   }
   
   @override

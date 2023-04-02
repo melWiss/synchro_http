@@ -15,8 +15,8 @@ class ResponseRepo extends RepoInterface<SynchroResponse> {
   }
   
   @override
-  SynchroResponse get(int key) {
-    return box.get(key)!;
+  SynchroResponse? get(int key) {
+    return box.get(key);
   }
   
   @override

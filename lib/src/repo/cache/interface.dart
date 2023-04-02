@@ -15,7 +15,7 @@ abstract class RepoInterface<T> {
   Box<T> get box => _box!;
 
   /// get cached [T] data by key
-  T get(int key);
+  T? get(int key);
 
   /// get all cached [T] data
   Iterable<T> get getAll;
