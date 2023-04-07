@@ -290,6 +290,7 @@ class SynchroHttp {
         return response;
       } else {
         var response = await request.sendIt();
+        response.requestHash = request.hashCode;
         _responsesRepo.write(request.hashCode, response);
         return response;
       }

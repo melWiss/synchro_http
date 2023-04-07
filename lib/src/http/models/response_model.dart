@@ -14,6 +14,7 @@ class SynchroResponse extends Response {
     required this.persistentConnection,
     required this.reasonPhrase,
     this.cached = false,
+    this.requestHash,
   }) : super(body, statusCode);
 
   @override
@@ -34,6 +35,8 @@ class SynchroResponse extends Response {
   @override
   @HiveField(5)
   final String? reasonPhrase;
+  @HiveField(6)
+  int? requestHash;
 
   bool cached;
 
@@ -47,14 +50,12 @@ class SynchroResponse extends Response {
       );
 
   factory SynchroResponse.fromMap(Map<String, dynamic> map) {
-    return SynchroResponse(
-      map['body'],
-      map['statusCode'],
-      headers: map['headers'],
-      isRedirect: map['isRedirect'],
-      persistentConnection: map['persistentConnection'],
-      reasonPhrase: map['reasonPhrase'],
-    );
+    return SynchroResponse(map['body'], map['statusCode'],
+        headers: map['headers'],
+        isRedirect: map['isRedirect'],
+        persistentConnection: map['persistentConnection'],
+        reasonPhrase: map['reasonPhrase'],
+        requestHash: map['requestHash']);
   }
 
   factory SynchroResponse.fromJson(String json) =>
@@ -68,16 +69,9 @@ class SynchroResponse extends Response {
       'isRedirect': isRedirect,
       'persistentConnection': persistentConnection,
       'reasonPhrase': reasonPhrase,
+      'requestHash': requestHash,
     };
   }
 
   String toJson() => jsonEncode(toMap());
-
-  // FIXME: find a way to save the request hash, this won't return a valid
-  // request hash since request body and response body aren't the same
-  int get requestHash =>
-      request!.method.hashCode ^
-      request!.url.toString().hashCode ^
-      body.hashCode ^
-      jsonEncode(headers).hashCode;
 }

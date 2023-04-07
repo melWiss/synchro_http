@@ -23,13 +23,14 @@ class SynchroResponseAdapter extends TypeAdapter<SynchroResponse> {
       isRedirect: fields[3] as bool,
       persistentConnection: fields[4] as bool,
       reasonPhrase: fields[5] as String?,
+      requestHash: fields[6] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SynchroResponse obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.body)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class SynchroResponseAdapter extends TypeAdapter<SynchroResponse> {
       ..writeByte(4)
       ..write(obj.persistentConnection)
       ..writeByte(5)
-      ..write(obj.reasonPhrase);
+      ..write(obj.reasonPhrase)
+      ..writeByte(6)
+      ..write(obj.requestHash);
   }
 
   @override
