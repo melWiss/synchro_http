@@ -9,3 +9,6 @@
 ## 0.3.0
 * Refined the package and became more stable
 * Added a clear way on how to manipulate cached Requests/Responses for more Offline use
+
+## 0.3.1
+* FIXED NetworkStatusWidget bottom status text weird red underlines

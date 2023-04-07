@@ -8,9 +8,15 @@ class NetworkStatusWidget extends StatelessWidget {
     Key? key,
     this.child,
     this.showOnline = true,
+    this.onlineString = "Online",
+    this.syncingString = "Syncing data...",
+    this.offlineString = "No Internet Connection",
   }) : super(key: key);
   final Widget? child;
   final bool showOnline;
+  final String onlineString;
+  final String syncingString;
+  final String offlineString;
 
   @override
   Widget build(BuildContext context) {
@@ -23,41 +29,47 @@ class NetworkStatusWidget extends StatelessWidget {
           children: [
             Expanded(child: child ?? Container()),
             if (status == SyncStatus.offline)
-              Container(
-                color: Colors.red,
-                padding: const EdgeInsets.all(8),
-                child: const Center(
-                  child: Text(
-                    "No Internet Connection",
-                    style: TextStyle(
-                      color: Colors.white,
+              Material(
+                child: Container(
+                  color: Colors.red,
+                  padding: const EdgeInsets.all(8),
+                  child: Center(
+                    child: Text(
+                      offlineString,
+                      style: const TextStyle(
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
             if (status == SyncStatus.synchronizing)
-              Container(
-                color: Colors.orange,
-                padding: const EdgeInsets.all(8),
-                child: const Center(
-                  child: Text(
-                    "Syncing data...",
-                    style: TextStyle(
-                      color: Colors.black,
+              Material(
+                child: Container(
+                  color: Colors.orange,
+                  padding: const EdgeInsets.all(8),
+                  child: Center(
+                    child: Text(
+                      syncingString,
+                      style: const TextStyle(
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),
               ),
             if (status == SyncStatus.online && showOnline)
               TimerWidget(
-                child: Container(
-                  color: Colors.green,
-                  padding: const EdgeInsets.all(8),
-                  child: const Center(
-                    child: Text(
-                      "Online",
-                      style: TextStyle(
-                        color: Colors.white,
+                child: Material(
+                  child: Container(
+                    color: Colors.green,
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: Text(
+                        onlineString,
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
