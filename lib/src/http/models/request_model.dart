@@ -39,7 +39,6 @@ class SynchroRequest extends Request {
   @override
   Uint8List get bodyBytes => Uint8List.fromList(body.codeUnits);
 
-
   factory SynchroRequest.fromRequest(Request request) {
     return SynchroRequest(
       request.url.toString(),
@@ -96,7 +95,13 @@ class SynchroRequest extends Request {
   }
 
   Future<SynchroResponse> sendIt() async {
-    var response = await Response.fromStream(await send());
+    Response response;
+    if (finalized) {
+      var request = SynchroRequest.fromRequest(this);
+      response = await Response.fromStream(await request.send());
+    } else {
+      response = await Response.fromStream(await send());
+    }
     return SynchroResponse.fromResponse(response);
   }
 }
