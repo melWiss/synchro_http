@@ -6,11 +6,12 @@ class StreamWidget<T> extends StatelessWidget {
   final Widget Function(Object? error)? onError;
   final Widget Function()? onWait;
   const StreamWidget({
+    Key? key,
     required this.stream,
     required this.widget,
     this.onError,
     this.onWait,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +29,7 @@ class StreamWidget<T> extends StatelessWidget {
             return onError!(snapshot.error);
         } else {
           if (onWait == null)
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(),
             );
           else

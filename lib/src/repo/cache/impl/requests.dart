@@ -1,96 +1,41 @@
-import 'dart:convert';
-import 'dart:io';
+import 'package:synchro_http/src/http/models/request_model.dart';
+import 'package:synchro_http/src/repo/cache/repo.dart';
 
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-
-import '../interface.dart';
-
-class RequestsRepo implements RepoInterface {
-  final String _name;
-
-  RequestsRepo({
-    /// the name of the repo
-    required String name,
-  }) : _name = name;
-
-  Future<File> get _getDbFile async {
-    Directory dirDB = await getApplicationSupportDirectory();
-    File f = File(join(dirDB.path, "$_name.json"));
-    if (!f.existsSync()) {
-      f.writeAsStringSync(jsonEncode({}));
-    }
-    return f;
-  }
-
+class RequestRepo extends RepoInterface<SynchroRequest> {
+  RequestRepo({super.name = HttpType.REQUEST});
+  
   @override
-  Future<Map<String, String>> get getAll async {
-    File f = await _getDbFile;
-    Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
-    Map<String, String> decodedData = data.map((key, value) =>
-        MapEntry(key, String.fromCharCodes(base64Decode(value))));
-    return decodedData;
+  void clear() {
+    box?.clear();
+  }
+  
+  @override
+  void delete(int key) {
+    box?.delete(key);
+  }
+  
+  @override
+  SynchroRequest? get(int key) {
+    return box?.get(key);
+  }
+  
+  @override
+  Iterable<SynchroRequest>? get getAll => box?.values;
+  
+  @override
+  void insert(int key, SynchroRequest data) {
+    box?.put(key, data);
+  }
+  
+  @override
+  void update(int key, SynchroRequest data) {
+    box?.put(key, data);
+  }
+  
+  @override
+  void write(int key, SynchroRequest data) {
+    box?.put(key, data);
   }
 
-  @override
-  Future delete(String key) async {
-    var db = await getNonDecodedAll;
-    if (db.remove(key) != null) {
-      var f = await _getDbFile;
-      f.writeAsStringSync(jsonEncode(db));
-    }
-  }
-
-  @override
-  Future<String> get(String key) async {
-    var db = await getNonDecodedAll;
-    return db[key]!;
-  }
-
-  @override
-  Future insert(String json, String key) async {
-    var db = await getNonDecodedAll;
-    var f = await _getDbFile;
-    db.addAll({db.length.toString(): base64Encode(json.codeUnits)});
-    f.writeAsStringSync(jsonEncode(db));
-  }
-
-  @override
-  Future update(String json, String key) async {
-    var db = await getNonDecodedAll;
-    if (db.containsKey(key)) {
-      var f = await _getDbFile;
-      db[key] = base64Encode(json.codeUnits);
-      f.writeAsStringSync(jsonEncode(db));
-    }
-  }
-
-  @override
-  Future write(String json, String key) async {
-    await insert(json, key);
-  }
-
-  @override
-  Future clear() async {
-    Directory dirDB = await getApplicationSupportDirectory();
-    File f = File(join(dirDB.path, "$_name.json"));
-    if (f.existsSync()) {
-      f.deleteSync();
-    }
-  }
-
-  @override
-  // TODO: implement getNonDecodedAll
-  Future<Map<String, String>> get getNonDecodedAll async {
-    File f = await _getDbFile;
-    Map<String, String> data = Map.from(jsonDecode(f.readAsStringSync()));
-    return data;
-  }
-
-  @override
-  Future init() async {
-    // TODO: implement init
-    debugPrint("JsonRepo is Initialized!");
-  }
+  
 }
