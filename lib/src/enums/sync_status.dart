@@ -1,1 +1,1 @@
-enum SyncStatus { online, offline, synchronizing }
+enum SyncStatus { online, offline, synchronizing, error }

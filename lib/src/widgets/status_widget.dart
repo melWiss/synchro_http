@@ -11,12 +11,14 @@ class NetworkStatusWidget extends StatelessWidget {
     this.onlineString = "Online",
     this.syncingString = "Syncing data...",
     this.offlineString = "No Internet Connection",
+    this.errorString = "Something went wrong during sync",
   }) : super(key: key);
   final Widget? child;
   final bool showOnline;
   final String onlineString;
   final String syncingString;
   final String offlineString;
+  final String errorString;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +55,21 @@ class NetworkStatusWidget extends StatelessWidget {
                       syncingString,
                       style: const TextStyle(
                         color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (status == SyncStatus.error)
+              Material(
+                child: Container(
+                  color: Colors.black,
+                  padding: const EdgeInsets.all(8),
+                  child: Center(
+                    child: Text(
+                      errorString,
+                      style: const TextStyle(
+                        color: Colors.white,
                       ),
                     ),
                   ),

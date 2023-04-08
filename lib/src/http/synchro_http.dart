@@ -52,10 +52,8 @@ class SynchroHttp {
     Hive.registerAdapter(SynchroResponseAdapter());
     _init().then((value) {
       if (kIsWeb) {
-        // FIXME: sync functions aren't detecting connectivity state
         _syncWeb().listen((event) => _controller.sink.add(event));
       } else {
-        // FIXME: sync functions aren't detecting connectivity state
         _sync().listen((event) => _controller.sink.add(event));
       }
     });
@@ -100,7 +98,7 @@ class SynchroHttp {
     await for (ConnectivityResult status in connection.onConnectivityChanged) {
       if (status != ConnectivityResult.none) {
         try {
-          var requests = requestsRepo.getAll; // FIXME: something is off  here
+          var requests = requestsRepo.getAll;
           if (requests?.isNotEmpty ?? false) {
             yield SyncStatus.synchronizing;
             for (var request in requests!) {
@@ -109,11 +107,17 @@ class SynchroHttp {
               responsesRepo.write(request.hashCode, response);
             }
           }
-          _toBeSynced.forEach((fn) => fn());
-          yield SyncStatus.online;
         } catch (_) {
-          yield SyncStatus.offline;
+          yield SyncStatus.error;
+          _requestsRepo.clear();
+          await Future.delayed(const Duration(seconds: 3));
         }
+        _toBeSynced.forEach((fn) {
+          try {
+            fn();
+          } catch (_) {}
+        });
+        yield SyncStatus.online;
       } else {
         yield SyncStatus.offline;
       }
