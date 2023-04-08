@@ -1,3 +1,5 @@
+## 0.3.3
+* Added error state and better error handling during sync
 ## 0.3.2
 * Cache first, delete on success
 ## 0.3.1
