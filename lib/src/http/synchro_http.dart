@@ -289,15 +289,21 @@ class SynchroHttp {
         if (response == null) throw NotCachedException();
         return response;
       } else {
+        _requestsRepo.write(request.hashCode, request);
         var response = await request.sendIt();
         response.requestHash = request.hashCode;
         _responsesRepo.write(request.hashCode, response);
+        _requestsRepo.delete(request.hashCode);
         return response;
       }
     } on NotCachedException catch (_) {
-      return await request.sendIt();
-    } on SocketException catch (_) {
       _requestsRepo.write(request.hashCode, request);
+      var response = await request.sendIt();
+      response.requestHash = request.hashCode;
+      _responsesRepo.write(request.hashCode, response);
+      _requestsRepo.delete(request.hashCode);
+      return response;
+    } on SocketException catch (_) {
       var response = _responsesRepo.get(request.hashCode);
       if (response != null) {
         response.cached = true;
@@ -305,7 +311,6 @@ class SynchroHttp {
       }
       rethrow;
     } on ClientException catch (_) {
-      _requestsRepo.write(request.hashCode, request);
       var response = _responsesRepo.get(request.hashCode);
       if (response != null) {
         response.cached = true;
