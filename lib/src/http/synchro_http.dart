@@ -51,11 +51,12 @@ class SynchroHttp {
     Hive.registerAdapter(SynchroRequestAdapter());
     Hive.registerAdapter(SynchroResponseAdapter());
     _init().then((value) {
-      if (kIsWeb) {
-        _syncWeb().listen((event) => _controller.sink.add(event));
-      } else {
-        _sync().listen((event) => _controller.sink.add(event));
-      }
+      _sync().listen((event) => _controller.sink.add(event));
+      // if (kIsWeb) {
+      //   _syncWeb().listen((event) => _controller.sink.add(event));
+      // } else {
+      //   _sync().listen((event) => _controller.sink.add(event));
+      // }
     });
   }
 
@@ -102,6 +103,7 @@ class SynchroHttp {
           if (requests?.isNotEmpty ?? false) {
             yield SyncStatus.synchronizing;
             for (var request in requests!) {
+              await Future.delayed(coolDownDuration);
               var response = await request.sendIt();
               requestsRepo.delete(request.hashCode);
               responsesRepo.write(request.hashCode, response);
@@ -136,6 +138,7 @@ class SynchroHttp {
         try {
           yield SyncStatus.synchronizing;
           for (var request in requests!) {
+            await Future.delayed(coolDownDuration);
             var response = await request.sendIt();
             requestsRepo.delete(request.hashCode);
             responsesRepo.write(request.hashCode, response);
