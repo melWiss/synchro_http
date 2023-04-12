@@ -110,12 +110,15 @@ class SynchroHttp {
             }
           }
         } on SocketException catch (_) {
-        } on ClientException catch (_) {
-        } catch (_) {
-          _requestsRepo.clear();
-        } finally {
           yield SyncStatus.error;
           await Future.delayed(const Duration(seconds: 3));
+        } on ClientException catch (_) {
+          yield SyncStatus.error;
+          await Future.delayed(const Duration(seconds: 3));
+        } catch (_) {
+          yield SyncStatus.error;
+          await Future.delayed(const Duration(seconds: 3));
+          _requestsRepo.clear();
         }
         _toBeSynced.forEach((fn) {
           try {
