@@ -1,3 +1,5 @@
+## 0.3.5
+* Bug fixes
 ## 0.3.3
 * Added error state and better error handling during sync
 ## 0.3.2

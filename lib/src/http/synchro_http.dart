@@ -109,9 +109,12 @@ class SynchroHttp {
               responsesRepo.write(request.hashCode, response);
             }
           }
+        } on SocketException catch (_) {
+        } on ClientException catch (_) {
         } catch (_) {
-          yield SyncStatus.error;
           _requestsRepo.clear();
+        } finally {
+          yield SyncStatus.error;
           await Future.delayed(const Duration(seconds: 3));
         }
         _toBeSynced.forEach((fn) {
