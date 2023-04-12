@@ -51,12 +51,12 @@ class SynchroHttp {
     Hive.registerAdapter(SynchroRequestAdapter());
     Hive.registerAdapter(SynchroResponseAdapter());
     _init().then((value) {
-      _sync().listen((event) => _controller.sink.add(event));
-      // if (kIsWeb) {
-      //   _syncWeb().listen((event) => _controller.sink.add(event));
-      // } else {
-      //   _sync().listen((event) => _controller.sink.add(event));
-      // }
+      // _sync().listen((event) => _controller.sink.add(event));
+      if (kIsWeb) {
+        _syncWeb().listen((event) => _controller.sink.add(event));
+      } else {
+        _sync().listen((event) => _controller.sink.add(event));
+      }
     });
   }
 
