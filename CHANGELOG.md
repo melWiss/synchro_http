@@ -1,3 +1,6 @@
+## 0.3.7
+* added **addGlobalHeader** method
+* added **removeGlobalHeader** method
 ## 0.3.6
 * Bug fixes
 ## 0.3.3

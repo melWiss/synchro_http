@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:synchro_http/src/enums/sync_status.dart';
 import 'package:synchro_http/src/exceptions/no_cache.dart';
 import 'package:synchro_http/src/http/models/request_model.dart';
 import 'package:synchro_http/src/http/models/response_model.dart';
 import 'package:synchro_http/src/repo/cache/impl/responses.dart';
 import 'package:synchro_http/src/repo/cache/repo.dart';
-import 'package:rxdart/rxdart.dart';
 
 class SynchroHttp {
   /// the singleton
@@ -309,21 +309,21 @@ class SynchroHttp {
         _requestsRepo.delete(request.hashCode);
         return response;
       }
-    } on NotCachedException catch (_) {
+    } on NotCachedException {
       _requestsRepo.write(request.hashCode, request);
       var response = await request.sendIt();
       response.requestHash = request.hashCode;
       _responsesRepo.write(request.hashCode, response);
       _requestsRepo.delete(request.hashCode);
       return response;
-    } on SocketException catch (_) {
+    } on SocketException {
       var response = _responsesRepo.get(request.hashCode);
       if (response != null) {
         response.cached = true;
         return response;
       }
       rethrow;
-    } on ClientException catch (_) {
+    } on ClientException {
       var response = _responsesRepo.get(request.hashCode);
       if (response != null) {
         response.cached = true;
@@ -350,5 +350,15 @@ class SynchroHttp {
   /// remove function from synchronization functions callback
   void removeSyncedMethod(Function function) {
     _toBeSynced.remove(function);
+  }
+
+  /// add a new global header
+  void addGlobalHeader(String header, String value) {
+    headers.addAll({header: value});
+  }
+
+  /// remove a global header
+  void removeGlobalHeader(String header) {
+    headers.remove(header);
   }
 }
