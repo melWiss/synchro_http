@@ -37,8 +37,8 @@ class Post {
 
   factory Post.fromMap(Map<String, dynamic> map) {
     return Post(
-      userId: map['userId']?.toInt(),
-      id: map['id']?.toInt(),
+      userId: map['id'] is num ? map['id']?.toInt() : int.parse(map['id']),
+      id: map['id'] is num ? map['id']?.toInt() : int.parse(map['id']),
       title: map['title'],
       body: map['body'],
     );
@@ -56,19 +56,16 @@ class Post {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-  
+
     return other is Post &&
-      other.userId == userId &&
-      other.id == id &&
-      other.title == title &&
-      other.body == body;
+        other.userId == userId &&
+        other.id == id &&
+        other.title == title &&
+        other.body == body;
   }
 
   @override
   int get hashCode {
-    return userId.hashCode ^
-      id.hashCode ^
-      title.hashCode ^
-      body.hashCode;
+    return userId.hashCode ^ id.hashCode ^ title.hashCode ^ body.hashCode;
   }
 }

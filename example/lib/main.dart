@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:synchro_http/synchro_http.dart';
 
 void main() async {
-  SynchroHttp.baseUrl = "https://jsonplaceholder.typicode.com";
+  SynchroHttp.baseUrl = "http://localhost:3000";
   runApp(const MyApp());
 }
 
